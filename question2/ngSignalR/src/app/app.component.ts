@@ -27,26 +27,52 @@ export class AppComponent {
     this.connect();
   }
 
-  connect() {
+  async connect() {
     this.hubConnection = new signalR.HubConnectionBuilder()
       .withUrl('http://localhost:5282/hubs/pizza')
       .build();
 
     // TODO: Mettre isConnected à true seulement une fois que la connection au Hub est faite
+    this.hubConnection.on('UpdateNbUsers', (count: number) => {
+      this.nbUsers = count;
+    });
+
+    this.hubConnection.on('UpdateMoney', (money: number) => {
+      this.money = money;
+    });
+
+    this.hubConnection.on('UpdateNbPizzasAndMoney', (nbPizzas: number, money: number) => {
+      this.nbPizzas = nbPizzas;
+      this.money = money;
+    });
+
+    this.hubConnection.on('UpdatePizzaPrice', (price: number) => {
+      this.pizzaPrice = price;
+    });
+
+    await this.hubConnection.start();
     this.isConnected = true;
   }
 
-  selectChoice(selectedChoice:number) {
+  async selectChoice(selectedChoice:number) {
     this.selectedChoice = selectedChoice;
+    await this.hubConnection?.invoke('SelectChoice', selectedChoice);
   }
 
-  unselectChoice() {
+  async unselectChoice() {
+     if (this.selectedChoice < 0) return;
+    const prev = this.selectedChoice;
     this.selectedChoice = -1;
+    await this.hubConnection?.invoke('UnselectChoice', prev);
   }
 
-  addMoney() {
+  async addMoney() {
+    if (this.selectedChoice < 0) return;
+    await this.hubConnection?.invoke('AddMoney', this.selectedChoice);
   }
 
-  buyPizza() {
+  async buyPizza() {
+    if (this.selectedChoice < 0) return;
+    await this.hubConnection?.invoke('BuyPizza', this.selectedChoice);
   }
 }
